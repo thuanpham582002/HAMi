@@ -1,0 +1,86 @@
+# Production values for HAMi deployment with custom AMD64 image
+# Updated to compatible version that supports runtime class injection
+version: "v0.0.3-amd64"
+
+# Use our custom-built AMD64 image
+scheduler:
+  extender:
+    image: "ghcr.io/thuanpham582002/hami"
+    imagePullPolicy: IfNotPresent
+    # Remove debug flags for production stability
+    extraArgs: []
+  kubeScheduler:
+    enabled: true
+    image: registry.cn-hangzhou.aliyuncs.com/google_containers/kube-scheduler
+    imageTag: "v1.28.0"
+    imagePullPolicy: IfNotPresent
+
+  # RuntimeClass configuration for GPU workload injection
+  runtimeClass:
+    name: "nvidia"
+    # Must be true for proper scheduler functionality with v0.0.3+ versions
+    enabled: true
+  
+  # Node selection for scheduler placement
+  nodeLabelSelector:
+    gpu: "on"
+  
+  # Scheduling policies
+  defaultSchedulerPolicy:
+    nodeSchedulerPolicy: binpack
+    gpuSchedulerPolicy: spread
+  
+  # Monitoring and health checks
+  metricsBindAddress: ":9395"
+  livenessProbe: true
+  leaderElect: true
+
+devicePlugin:
+  image: "ghcr.io/thuanpham582002/hami"
+  monitorimage: "ghcr.io/thuanpham582002/hami"
+  imagePullPolicy: IfNotPresent
+
+  # Use NVIDIA runtime for GPU access
+  runtimeClassName: "nvidia"
+
+  # GPU node selector - nodes must have gpu=on label
+  nvidianodeSelector:
+    gpu: "on"
+  
+  # Device configuration
+  deviceSplitCount: 10
+  deviceMemoryScaling: 1
+  deviceCoreScaling: 1
+  disablecorelimit: false
+  migstrategy: "none"
+  
+  # Resource names
+  resourceName: "nvidia.com/gpu"
+  resourceMem: "nvidia.com/gpumem"
+  resourceMemPercentage: "nvidia.com/gpumem-percentage"
+  resourceCores: "nvidia.com/gpucores"
+  resourcePriority: "nvidia.com/priority"
+  
+  # Remove debug flags for production
+  extraArgs: []
+  
+  # Update strategy for production (use OnDelete for safety)
+  updateStrategy:
+    type: OnDelete
+
+# Global configuration
+global:
+  gpuHookPath: /usr/local
+  # Enable managed node selector for GPU nodes
+  managedNodeSelectorEnable: true
+  managedNodeSelector:
+    gpu: "on"
+
+# Scheduler configuration
+schedulerName: "hami-scheduler"
+
+# Service configuration
+service:
+  type: NodePort
+  httpPort: 443
+  grpcPort: 31993

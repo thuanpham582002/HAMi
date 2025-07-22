@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hami-multi-test-1
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  containers:
+  - name: gpu-app-1
+    image: alpine:3.18
+    command: ["sh", "-c", "echo 'GPU App 1 - Allocated GPU resources' && env | grep NVIDIA && sleep 600"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+        nvidia.com/gpumem: 2000
+        nvidia.com/gpucores: 30
+      requests:
+        nvidia.com/gpu: 1
+        nvidia.com/gpumem: 2000
+        nvidia.com/gpucores: 30
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hami-multi-test-2
+  namespace: default
+spec:
+  schedulerName: hami-scheduler
+  containers:
+  - name: gpu-app-2
+    image: alpine:3.18
+    command: ["sh", "-c", "echo 'GPU App 2 - Allocated GPU resources' && env | grep NVIDIA && sleep 600"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+        nvidia.com/gpumem: 1500
+        nvidia.com/gpucores: 20
+      requests:
+        nvidia.com/gpu: 1
+        nvidia.com/gpumem: 1500
+        nvidia.com/gpucores: 20
+  restartPolicy: Never

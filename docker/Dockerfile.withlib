@@ -26,7 +26,7 @@ COPY ./docker/entrypoint.sh /k8s-vgpu/bin/entrypoint.sh
 COPY ./docker/vgpu-init.sh /k8s-vgpu/bin/vgpu-init.sh
 COPY ./lib /k8s-vgpu/lib
 COPY ./libvgpu.so /k8s-vgpu/lib/nvidia/libvgpu.so."$VERSION"
-COPY ./license /k8s-vgpu/lib/nvidia/
+COPY ./license_dir /k8s-vgpu/lib/nvidia/license
 COPY ./vgpuvalidator /k8s-vgpu/lib/nvidia
 
 ENV PATH="/k8s-vgpu/bin:${PATH}"

@@ -37,4 +37,9 @@ var (
 
 	// NodeLabelSelector is scheduler filter node by node label.
 	NodeLabelSelector map[string]string
+
+	// RuntimeClassName is the runtime class to inject for GPU pods. Default is "nvidia".
+	RuntimeClassName = "nvidia"
+	// EnableRuntimeClassInjection controls whether to automatically inject runtime class for GPU pods.
+	EnableRuntimeClassInjection = true
 )

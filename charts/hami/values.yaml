@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: [ ]
-version: "v2.6.0"
+version: "v0.0.3-amd64"
 
 #Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -51,9 +51,8 @@ scheduler:
   # @param nodeName defines the node name and the nvidia-vgpu-scheduler-scheduler will schedule to the node.
   # if we install the nvidia-vgpu-scheduler-scheduler as default scheduler, we need to remove the k8s default
   # scheduler pod from the cluster first, we must specify node name to skip the schedule workflow.
-  nodeName: ""
-  #nodeLabelSelector:
-  #  "gpu": "on"
+  nodeLabelSelector:
+    "gpu": "on"
   overwriteEnv: "false"
   defaultSchedulerPolicy:
     nodeSchedulerPolicy: binpack
@@ -63,11 +62,21 @@ scheduler:
   leaderElect: true
   # when leaderElect is true, replicas is available, otherwise replicas is 1.
   replicas: 1
+
+  # RuntimeClass configuration for GPU workload injection
+  runtimeClass:
+    # @param runtimeClassName specifies the runtime class name to inject for GPU pods
+    # Common values: "nvidia", "nvidia-container-runtime", "containerd-nvidia", ""
+    # Set to empty string to disable runtime class injection
+    name: "nvidia"
+    # @param enabled controls whether to enable runtime class injection for GPU pods
+    # NOTE: Should be true for proper scheduler functionality with v0.0.3+ versions
+    enabled: true
   kubeScheduler:
     # @param enabled indicate whether to run kube-scheduler container in the scheduler pod, it's true by default.
     enabled: true
     image: registry.cn-hangzhou.aliyuncs.com/google_containers/kube-scheduler
-    imageTag: ""
+    imageTag: "v1.28.0"
     imagePullPolicy: IfNotPresent
     resources: {}
       # If you do want to specify resources, uncomment the following lines, adjust them as necessary.
@@ -85,7 +94,7 @@ scheduler:
       - --policy-config-file=/config/config.json
       - -v=4
   extender:
-    image: "projecthami/hami"
+    image: "ghcr.io/thuanpham582002/hami"
     imagePullPolicy: IfNotPresent
     resources: {}
       # If you do want to specify resources, uncomment the following lines, adjust them as necessary,
@@ -143,15 +152,19 @@ scheduler:
     annotations: {}
 
 devicePlugin:
-  image: "projecthami/hami"
-  monitorimage: "projecthami/hami"
+  image: "ghcr.io/thuanpham582002/hami"
+  monitorimage: "ghcr.io/thuanpham582002/hami"
   monitorctrPath: /usr/local/vgpu/containers
   imagePullPolicy: IfNotPresent
   deviceSplitCount: 10
   deviceMemoryScaling: 1
   deviceCoreScaling: 1
-  # The runtime class name to be used by the device plugin, and added to the pod.spec.runtimeClassName of applications utilizing NVIDIA GPUs
-  runtimeClassName: ""
+  # @param runtimeClassName specifies the runtime class for the device plugin DaemonSet pods
+  # Common values: "nvidia", "nvidia-container-runtime", "containerd-nvidia", ""
+  # Set to empty string to use the default runtime class
+  # Note: This is different from scheduler.runtimeClass.name which controls runtime injection for GPU workloads
+  runtimeClassName: "nvidia"
+  
   # Whether to create runtime class, name comes from runtimeClassName when it is set
   createRuntimeClass: false
   migStrategy: "none"

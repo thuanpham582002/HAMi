@@ -100,6 +100,15 @@ spec:
             - --node-scheduler-policy={{ .Values.scheduler.defaultSchedulerPolicy.nodeSchedulerPolicy }}
             - --gpu-scheduler-policy={{ .Values.scheduler.defaultSchedulerPolicy.gpuSchedulerPolicy }}
             - --device-config-file=/device-config.yaml
+            {{- if .Values.scheduler.runtimeClass.enabled }}
+            - --enable-runtime-class-injection=true
+            {{- if .Values.scheduler.runtimeClass.name }}
+            - --runtime-class-name={{ .Values.scheduler.runtimeClass.name }}
+            {{- end }}
+            {{- else }}
+            # NOTE: --enable-runtime-class-injection flag requires image version v0.0.3+ to work properly
+            - --enable-runtime-class-injection=false
+            {{- end }}
             {{- if .Values.devices.ascend.enabled }}
             - --enable-ascend=true
             {{- end }}

@@ -38,6 +38,80 @@ type webhook struct {
 	decoder *admission.Decoder
 }
 
+// hasGPUResources checks if a container requests any GPU resources
+func hasGPUResources(container *corev1.Container) bool {
+	if container.Resources.Requests == nil && container.Resources.Limits == nil {
+		return false
+	}
+
+	// Check both requests and limits for GPU resources
+	for _, resources := range []corev1.ResourceList{container.Resources.Requests, container.Resources.Limits} {
+		if resources == nil {
+			continue
+		}
+
+		// Check for various GPU resource types
+		gpuResourceNames := []string{
+			"nvidia.com/gpu",
+			"nvidia.com/gpucores",
+			"nvidia.com/gpumem-percentage",
+			"nvidia.com/gpumem",
+			"amd.com/gpu",
+			"intel.com/gpu",
+		}
+
+		for _, resourceName := range gpuResourceNames {
+			if quantity, exists := resources[corev1.ResourceName(resourceName)]; exists {
+				if !quantity.IsZero() {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// shouldInjectRuntimeClass determines if runtime class should be injected for this pod
+func shouldInjectRuntimeClass(pod *corev1.Pod) bool {
+	// Skip if runtime class injection is disabled
+	if !config.EnableRuntimeClassInjection {
+		return false
+	}
+
+	// Skip if pod already has a runtime class specified
+	if pod.Spec.RuntimeClassName != nil && *pod.Spec.RuntimeClassName != "" {
+		return false
+	}
+
+	// Skip if this is a privileged pod (likely system pod)
+	for _, container := range pod.Spec.Containers {
+		if container.SecurityContext != nil &&
+			container.SecurityContext.Privileged != nil &&
+			*container.SecurityContext.Privileged {
+			return false
+		}
+	}
+
+	// Check if any container requests GPU resources
+	for _, container := range pod.Spec.Containers {
+		if hasGPUResources(&container) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// injectRuntimeClass adds the NVIDIA runtime class to the pod spec
+func injectRuntimeClass(pod *corev1.Pod) {
+	if config.RuntimeClassName != "" {
+		pod.Spec.RuntimeClassName = &config.RuntimeClassName
+		klog.Infof("Injected runtime class '%s' for GPU pod %s/%s",
+			config.RuntimeClassName, pod.Namespace, pod.Name)
+	}
+}
+
 func NewWebHook() (*admission.Webhook, error) {
 	logf.SetLogger(klog.NewKlogr())
 	schema := runtime.NewScheme()
@@ -62,6 +136,13 @@ func (h *webhook) Handle(_ context.Context, req admission.Request) admission.Res
 	}
 	klog.Infof(template, req.Namespace, req.Name, req.UID)
 	hasResource := false
+
+	// Check if we should inject runtime class for GPU workloads
+	if shouldInjectRuntimeClass(pod) {
+		injectRuntimeClass(pod)
+		klog.Infof(template+" - Injected runtime class for GPU pod", req.Namespace, req.Name, req.UID)
+	}
+
 	for idx, ctr := range pod.Spec.Containers {
 		c := &pod.Spec.Containers[idx]
 		if ctr.SecurityContext != nil {
