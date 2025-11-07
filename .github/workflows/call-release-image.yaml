@@ -1,9 +1,9 @@
 name: Call Release Image
 
 env:
-  REGISTRY: docker.io
-  IMAGE_REPO: ${{ secrets.IMAGE_REPO || 'projecthami/hami' }}
-  IMAGE_REPO_HAMICORE: ${{ secrets.IMAGE_REPO || 'projecthami/hamicore' }}
+  REGISTRY: ghcr.io
+  IMAGE_REPO: ${{ github.repository }}
+  IMAGE_REPO_HAMICORE: ${{ github.repository }}-hamicore
   IMAGE_ROOT_PATH: docker
   BUILD_PLATFORM: linux/arm64,linux/amd64
   REGISTER_USER: ${{ github.actor }}
@@ -81,8 +81,9 @@ jobs:
       - name: Docker Login
         uses: docker/login-action@v3.6.0
         with:
-            username: ${{ secrets.DOCKERHUB_TOKEN }}
-            password: ${{ secrets.DOCKERHUB_PASSWD }}
+            registry: ${{ env.REGISTRY }}
+            username: ${{ env.REGISTER_USER }}
+            password: ${{ env.REGISTER_PASSWORD }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
