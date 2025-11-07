@@ -112,8 +112,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
         with:
+          repository: ${{ github.repository }}
           ref: ${{ env.MERGE_BRANCH }}
           persist-credentials: "true"
+      - name: Create gh-pages branch if not exists
+        run: |
+          if ! git rev-parse --verify ${{ env.MERGE_BRANCH }} >/dev/null 2>&1; then
+            echo "Branch ${{ env.MERGE_BRANCH }} does not exist. Creating it..."
+            git checkout --orphan ${{ env.MERGE_BRANCH }}
+            git rm -rf .
+            echo "# GitHub Pages for ${{ github.repository }}" > README.md
+            git add README.md
+            git commit -m "Initialize ${{ env.MERGE_BRANCH }} branch"
+          else
+            echo "Branch ${{ env.MERGE_BRANCH }} already exists"
+          fi
 
       - name: Download Artifact
         uses: actions/download-artifact@v6
@@ -125,15 +138,10 @@ jobs:
         run: |
           helm repo index  ./charts  --url ${{ env.URL }}/charts
           mv ./charts/index.yaml ./index.yaml
-      - name: update helm release
-        id: push_directory
-        uses: cpina/github-action-push-to-another-repository@v1.7.3
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
-        with:
-          source-directory: .
-          destination-github-username: ${{ github.repository_owner }}
-          destination-repository-name: hami
-          user-email: xiaozhang0210@hotmail.com
-          commit-message: sync ORIGIN_COMMIT from $GITHUB_REF
-          target-branch: ${{ env.MERGE_BRANCH }}
+      - name: Update and push to gh-pages
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Update helm charts for ${{ needs.get_ref.outputs.ref }}"
+          git push origin ${{ env.MERGE_BRANCH }}
