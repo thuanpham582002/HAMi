@@ -66,13 +66,13 @@ jobs:
         uses: actions/checkout@v5
         with:
           persist-credentials: false
-          ref: ${{ steps.ref.outputs.ref }}
-      
-      - name: Checkout submodule
-        uses: Mushus/checkout-submodule@v1.0.1
-        with:
-          basePath: # optional, default is .
-          submodulePath: libvgpu 
+          submodules: recursive
+          repository: ${{ github.repository }}
+          fetch-depth: 0
+      - name: Checkout specific ref
+        run: |
+          git fetch origin ${{ steps.ref.outputs.ref }} || echo "Ref not found in fork, using current branch"
+          git checkout ${{ steps.ref.outputs.ref }} || git checkout master 
 
       - name: Lint Dockerfile
         run: |
